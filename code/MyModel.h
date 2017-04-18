@@ -26,6 +26,9 @@ class MyModel
         double qso_amplitude;
         double qso_timescale;
 
+        // Time delays (relative to image 0)
+        std::vector<double> time_delays;
+
         // Error bar boost parameter
         double u_boost;
         double sigma_boost_factor;
