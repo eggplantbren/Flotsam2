@@ -24,8 +24,8 @@ int main(int argc, char** argv)
     // Load data
     Flotsam2::Data::get_instance().load(data_file.c_str());
 
-//    // Run DNest4.
-//    DNest4::start<Flotsam2::MyModel>(clos);
+    // Run DNest4.
+    DNest4::start<Flotsam2::MyModel>(clos);
 
     return 0;
 }

@@ -20,11 +20,16 @@ void MyModel::from_prior(DNest4::RNG& rng)
     mu_magnitudes = 30.0*rng.randn();
     sig_magnitudes = exp(log(0.1) + log(100.0)*rng.rand());
 
-    for(size_t i=0; i<magnitude_ns.size(); ++i)
-    {
+    for(size_t i=0; i<magnitudes.size(); ++i)
         magnitude_ns[i] = rng.randn();
+
+    compute_magnitudes();
+}
+
+void MyModel::compute_magnitudes()
+{
+    for(size_t i=0; i<magnitudes.size(); ++i)
         magnitudes[i] = mu_magnitudes + sig_magnitudes*magnitude_ns[i];
-    }
 }
 
 void MyModel::compute_sigma_boost_factor()
@@ -51,6 +56,8 @@ double MyModel::perturb(DNest4::RNG& rng)
         logH -= -0.5*pow(mu_magnitudes/30.0, 2);
         mu_magnitudes += 30.0*rng.randh();
         logH += -0.5*pow(mu_magnitudes/30.0, 2);
+
+        compute_magnitudes();
     }
     else if(which == 1)
     {
@@ -58,6 +65,8 @@ double MyModel::perturb(DNest4::RNG& rng)
         sig_magnitudes += log(100.0)*rng.randh();
         DNest4::wrap(sig_magnitudes, log(0.1), log(10.0));
         sig_magnitudes = exp(sig_magnitudes);
+
+        compute_magnitudes();
     }
     else
     {
@@ -67,7 +76,7 @@ double MyModel::perturb(DNest4::RNG& rng)
         magnitude_ns[i] += rng.randh();
         logH += -0.5*pow(magnitude_ns[i], 2);
 
-        magnitudes[i] = mu_magnitudes + sig_magnitudes*magnitude_ns[i];
+        compute_magnitudes();
     }
 
     return logH;

@@ -20,6 +20,7 @@ class MyModel
         // Normals for mean levels of images
         std::vector<double> magnitude_ns;
         std::vector<double> magnitudes;
+        void compute_magnitudes();
 
         // Error bar boost parameter
         double u_boost;
