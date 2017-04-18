@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-namespace Celery
+namespace Flotsam2
 {
 
 Data Data::instance;
@@ -26,13 +26,16 @@ void Data::load(const char* filename)
     t.clear();
     y.clear();
     sig.clear();
+    image.clear();
 
     double temp1, temp2, temp3;
-    while(fin>>temp1 && fin>>temp2 && fin>>temp3)
+    size_t temp4;
+    while(fin>>temp1 && fin>>temp2 && fin>>temp3 && fin>>temp4)
     {
         t.push_back(temp1);
         y.push_back(temp2);
         sig.push_back(temp3);
+        image.push_back(temp4);
 
         if(t.size() >= 2 && t.back() < t[t.size() - 2])
             throw std::invalid_argument("Unsorted t-values in file.");
@@ -53,5 +56,5 @@ void Data::load(const char* filename)
     }
 }
 
-} // namespace Celery
+} // namespace Flotsam2
 
