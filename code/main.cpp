@@ -22,10 +22,10 @@ int main(int argc, char** argv)
     fout.close();
 
     // Load data
-    Celery::Data::get_instance().load(data_file.c_str());
+    Flotsam2::Data::get_instance().load(data_file.c_str());
 
-    // Run DNest4.
-    DNest4::start<Celery::MyModel>(clos);
+//    // Run DNest4.
+//    DNest4::start<Flotsam2::MyModel>(clos);
 
     return 0;
 }
