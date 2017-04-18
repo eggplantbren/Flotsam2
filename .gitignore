@@ -1,2 +1,8 @@
 code/main
 code/run_data.txt
+code/levels.txt
+code/weights.txt
+code/sample.txt
+code/sample_info.txt
+code/posterior_sample.txt
+code/sampler_state.txt
