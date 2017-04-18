@@ -26,7 +26,8 @@ class MyModel
         double qso_timescale;
 
         // Time delays (relative to image 0)
-        std::vector<double> time_delays;
+        double sig_time_delay;
+        std::vector<double> time_delay_ns;
 
         // Amplitudes and timescales for extra
         // correlated residual ("microlensing")

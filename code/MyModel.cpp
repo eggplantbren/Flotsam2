@@ -9,7 +9,7 @@ namespace Flotsam2
 MyModel::MyModel()
 :magnitude_ns(Data::get_instance().get_num_images())
 ,magnitudes(Data::get_instance().get_num_images())
-,time_delays(Data::get_instance().get_num_images(), 0.0)
+,time_delay_ns(Data::get_instance().get_num_images(), 0.0)
 ,amplitude_ns(Data::get_instance().get_num_images())
 ,timescale_ns(Data::get_instance().get_num_images())
 {
@@ -33,15 +33,9 @@ void MyModel::from_prior(DNest4::RNG& rng)
     qso_timescale = exp(log(0.1*t_range) + log(100.0)*rng.rand());
 
     // Time delay prior
-    double width = 0.1*t_range;
-    DNest4::Cauchy cauchy(0.0, width);
-    for(size_t i=1; i<time_delays.size(); ++i)
-    {
-        do
-        {
-            time_delays[i] = cauchy.generate(rng);
-        }while(std::abs(time_delays[i]) > t_range);
-    }
+    sig_time_delay = exp(log(1E-3*t_range) + log(1E3)*rng.rand());
+    for(size_t i=1; i<time_delay_ns.size(); ++i)
+        time_delay_ns[i] = rng.randn();
 
     // Microlensing-related hyperparameters
     mu_amplitude = -log(1.0 - rng.rand());
@@ -86,6 +80,7 @@ double MyModel::perturb(DNest4::RNG& rng)
     double t_range = Data::get_instance().get_t_range();
 
     bool bulk = rng.rand() <= 0.5;
+
     if(bulk)
     {
         int which = rng.rand_int(4);
@@ -103,13 +98,11 @@ double MyModel::perturb(DNest4::RNG& rng)
         else if(which == 1)
         {
             // Which time delay to change
-            int i = 1 + rng.rand_int(time_delays.size() - 1);
+            int i = 1 + rng.rand_int(time_delay_ns.size() - 1);
 
-            double width = 0.1*t_range;
-            DNest4::Cauchy cauchy(0.0, width);
-            logH += cauchy.perturb(time_delays[i], rng);
-            if(std::abs(time_delays[i]) > t_range)
-                return -1E300;
+            logH -= -0.5*pow(time_delay_ns[i], 2);
+            time_delay_ns[i] += rng.randh();
+            logH += -0.5*pow(time_delay_ns[i], 2);
         }
         else if(which == 2)
         {
@@ -130,7 +123,7 @@ double MyModel::perturb(DNest4::RNG& rng)
     }
     else
     {
-        int which = rng.rand_int(9);
+        int which = rng.rand_int(10);
 
         if(which == 0)
         {
@@ -158,8 +151,6 @@ double MyModel::perturb(DNest4::RNG& rng)
         }
         else if(which == 3)
         {
-            // Grab timescale from data
-            double t_range = Data::get_instance().get_t_range();
             qso_timescale = log(qso_timescale);
             qso_timescale += log(100.0)*rng.randh();
             DNest4::wrap(qso_timescale, log(0.1*t_range), log(10.0*t_range));
@@ -167,24 +158,31 @@ double MyModel::perturb(DNest4::RNG& rng)
         }
         else if(which == 4)
         {
+            sig_time_delay = log(sig_time_delay);
+            sig_time_delay += log(1E3)*rng.randh();
+            DNest4::wrap(sig_time_delay, log(1E-3*t_range), log(t_range));
+            sig_time_delay = exp(sig_time_delay);
+        }
+        else if(which == 5)
+        {
             mu_amplitude = 1.0 - exp(-mu_amplitude);
             mu_amplitude += rng.randh();
             DNest4::wrap(mu_amplitude, 0.0, 1.0);
             mu_amplitude = -log(1.0 - mu_amplitude);
         }
-        else if(which == 5)
+        else if(which == 6)
         {
             sig_log_amplitude += 3.0*rng.randh();
             DNest4::wrap(sig_log_amplitude, 0.0, 3.0);
         }
-        else if(which == 6)
+        else if(which == 7)
         {
             mu_timescale = log(mu_timescale);
             mu_timescale += log(100.0)*rng.randh();
             DNest4::wrap(mu_timescale, log(0.1*t_range), log(10.0*t_range));
             mu_timescale = exp(mu_timescale);       
         }
-        else if(which == 7)
+        else if(which == 8)
         {
             sig_log_timescale += 3.0*rng.randh();
             DNest4::wrap(sig_log_timescale, 0.0, 3.0);
@@ -215,7 +213,7 @@ double MyModel::log_likelihood() const
 
     // Adjust for time delays
     for(size_t i=0; i<t.size(); ++i)
-        t[i] -= time_delays[image[i]];
+        t[i] -= sig_time_delay*time_delay_ns[image[i]];
 
     // Subtract the magnitudes
     for(size_t i=0; i<y.size(); ++i)
@@ -279,8 +277,9 @@ void MyModel::print(std::ostream& out) const
     out << qso_amplitude << ' ';
     out << qso_timescale << ' ';
 
-    for(double tau: time_delays)
-        out << tau << ' ';
+    out << sig_time_delay << ' ';
+    for(double n: time_delay_ns)
+        out << sig_time_delay*n << ' ';
 
     out << mu_amplitude << ' ';
     out << sig_log_amplitude << ' ';
@@ -306,6 +305,7 @@ std::string MyModel::description() const
 
     s << "qso_amplitude, qso_timescale, ";
 
+    s << "sig_time_delay, ";
     for(size_t i=0; i<magnitudes.size(); ++i)
         s << "time_delays[" << i << "], ";
 
