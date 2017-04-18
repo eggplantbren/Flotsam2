@@ -79,11 +79,21 @@ double MyModel::perturb(DNest4::RNG& rng)
     // Grab timescale from data
     double t_range = Data::get_instance().get_t_range();
 
+    // Change a time delay with probability 0.5
+    if(rng.rand() <= 0.5)
+    {
+        int i = 1 + rng.rand_int(time_delay_ns.size() - 1);
+
+        logH -= -0.5*pow(time_delay_ns[i], 2);
+        time_delay_ns[i] += rng.randh();
+        logH += -0.5*pow(time_delay_ns[i], 2);
+    }
+
     bool bulk = rng.rand() <= 0.5;
 
     if(bulk)
     {
-        int which = rng.rand_int(4);
+        int which = rng.rand_int(3);
 
         if(which == 0)
         {
@@ -94,15 +104,6 @@ double MyModel::perturb(DNest4::RNG& rng)
             logH += -0.5*pow(magnitude_ns[i], 2);
 
             compute_magnitudes();
-        }
-        else if(which == 1)
-        {
-            // Which time delay to change
-            int i = 1 + rng.rand_int(time_delay_ns.size() - 1);
-
-            logH -= -0.5*pow(time_delay_ns[i], 2);
-            time_delay_ns[i] += rng.randh();
-            logH += -0.5*pow(time_delay_ns[i], 2);
         }
         else if(which == 2)
         {
@@ -236,19 +237,19 @@ double MyModel::log_likelihood() const
     }
 
     // QSO term
-    Eigen::VectorXd alpha_real(1 + data.get_num_images()),
-                    beta_real (1 + data.get_num_images());
+    Eigen::VectorXd alpha_real(1),// + data.get_num_images()),
+                    beta_real (1);// + data.get_num_images());
     alpha_real(0) = qso_amplitude;
     beta_real(0) = 1.0/qso_timescale;
 
-    // Microlensing terms
-    for(size_t i=0; i<data.get_num_images(); ++i)
-    {
-        alpha_real(i+1) = mu_amplitude*
-                            exp(sig_log_amplitude*amplitude_ns[i]);
-        beta_real(i+1)  = 1.0/mu_timescale/
-                            exp(sig_log_timescale*timescale_ns[i]);
-    }
+//    // Microlensing terms
+//    for(size_t i=0; i<data.get_num_images(); ++i)
+//    {
+//        alpha_real(i+1) = mu_amplitude*
+//                            exp(sig_log_amplitude*amplitude_ns[i]);
+//        beta_real(i+1)  = 1.0/mu_timescale/
+//                            exp(sig_log_timescale*timescale_ns[i]);
+//    }
 
     // Celerite solver
     celerite::solver::BandSolver<double> solver(true);
