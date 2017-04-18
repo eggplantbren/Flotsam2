@@ -44,6 +44,32 @@ double MyModel::perturb(DNest4::RNG& rng)
 {
     double logH = 0.0;
 
+    int which = rng.rand_int(3);
+
+    if(which == 0)
+    {
+        logH -= -0.5*pow(mu_magnitudes/30.0, 2);
+        mu_magnitudes += 30.0*rng.randh();
+        logH += -0.5*pow(mu_magnitudes/30.0, 2);
+    }
+    else if(which == 1)
+    {
+        sig_magnitudes = log(sig_magnitudes);
+        sig_magnitudes += log(100.0)*rng.randh();
+        DNest4::wrap(sig_magnitudes, log(0.1), log(10.0));
+        sig_magnitudes = exp(sig_magnitudes);
+    }
+    else
+    {
+        int i = rng.rand_int(magnitude_ns.size());
+
+        logH -= -0.5*pow(magnitude_ns[i], 2);
+        magnitude_ns[i] += rng.randh();
+        logH += -0.5*pow(magnitude_ns[i], 2);
+
+        magnitudes[i] = mu_magnitudes + sig_magnitudes*magnitude_ns[i];
+    }
+
     return logH;
 }
 
@@ -56,12 +82,21 @@ double MyModel::log_likelihood() const
 
 void MyModel::print(std::ostream& out) const
 {
+    out << mu_magnitudes << ' ';
+    out << sig_magnitudes << ' ';
 
+    for(double m: magnitudes)
+        out << m << ' ';
 }
 
 std::string MyModel::description() const
 {
     std::stringstream s;
+
+    s << "mu_magnitudes, ";
+    s << "sig_magnitudes, ";
+    for(size_t i=0; i<magnitudes.size(); ++i)
+        s << "magnitudes[" << i << "], ";
 
     return s.str();
 }
