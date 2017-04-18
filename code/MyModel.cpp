@@ -10,6 +10,8 @@ MyModel::MyModel()
 :magnitude_ns(Data::get_instance().get_num_images())
 ,magnitudes(Data::get_instance().get_num_images())
 ,time_delays(Data::get_instance().get_num_images(), 0.0)
+,amplitude_ns(Data::get_instance().get_num_images())
+,timescale_ns(Data::get_instance().get_num_images())
 {
 
 }
@@ -41,6 +43,18 @@ void MyModel::from_prior(DNest4::RNG& rng)
         }while(std::abs(time_delays[i]) > t_range);
     }
 
+    // Microlensing-related hyperparameters
+    mu_amplitude = -log(1.0 - rng.rand());
+    sig_log_amplitude = 3.0*rng.rand();
+    mu_timescale = exp(log(0.1*t_range) + log(100.0)*rng.rand());
+    sig_log_timescale = 3.0*rng.rand();
+
+    // Microlensing-related normals
+    for(double& n: amplitude_ns)
+        n = rng.randn();
+    for(double& n: timescale_ns)
+        n = rng.randn();
+
     u_boost = rng.rand();
     compute_sigma_boost_factor();
 }
@@ -68,7 +82,10 @@ double MyModel::perturb(DNest4::RNG& rng)
 {
     double logH = 0.0;
 
-    int which = rng.rand_int(7);
+    // Grab timescale from data
+    double t_range = Data::get_instance().get_t_range();
+
+    int which = rng.rand_int(13);
 
     if(which == 0)
     {
@@ -118,13 +135,51 @@ double MyModel::perturb(DNest4::RNG& rng)
         // Which time delay to change
         int i = 1 + rng.rand_int(time_delays.size() - 1);
 
-        // Grab timescale from data
-        double t_range = Data::get_instance().get_t_range();
         double width = 0.1*t_range;
         DNest4::Cauchy cauchy(0.0, width);
         logH += cauchy.perturb(time_delays[i], rng);
         if(std::abs(time_delays[i]) > t_range)
             return -1E300;
+    }
+    else if(which == 6)
+    {
+        mu_amplitude = 1.0 - exp(-mu_amplitude);
+        mu_amplitude += rng.randh();
+        DNest4::wrap(mu_amplitude, 0.0, 1.0);
+        mu_amplitude = -log(1.0 - mu_amplitude);
+    }
+    else if(which == 7)
+    {
+        sig_log_amplitude += 3.0*rng.randh();
+        DNest4::wrap(sig_log_amplitude, 0.0, 3.0);
+    }
+    else if(which == 8)
+    {
+        mu_timescale = log(mu_timescale);
+        mu_timescale += log(100.0)*rng.randh();
+        DNest4::wrap(mu_timescale, log(0.1*t_range), log(10.0*t_range));
+        mu_timescale = exp(mu_timescale);       
+    }
+    else if(which == 9)
+    {
+        sig_log_timescale += 3.0*rng.randh();
+        DNest4::wrap(sig_log_timescale, 0.0, 3.0);
+    }
+    else if(which == 10)
+    {
+        int i = rng.rand_int(amplitude_ns.size());
+
+        logH -= -0.5*pow(amplitude_ns[i], 2);
+        amplitude_ns[i] += rng.randh();
+        logH += -0.5*pow(amplitude_ns[i], 2);
+    }
+    else if(which == 11)
+    {
+        int i = rng.rand_int(timescale_ns.size());
+
+        logH -= -0.5*pow(timescale_ns[i], 2);
+        timescale_ns[i] += rng.randh();
+        logH += -0.5*pow(timescale_ns[i], 2);
     }
     else
     {
@@ -144,10 +199,10 @@ double MyModel::log_likelihood() const
     const Data& data = Data::get_instance();
 
     // Copies of, or references to, things in the data
-    auto image = Data::get_instance().get_image();
-    std::vector<double> t = Data::get_instance().get_t();
-    std::vector<double> y = Data::get_instance().get_y();
-    std::vector<double> sig = Data::get_instance().get_sig();
+    auto image = data.get_image();
+    std::vector<double> t = data.get_t();
+    std::vector<double> y = data.get_y();
+    std::vector<double> sig = data.get_sig();
 
     // Adjust for time delays
     for(size_t i=0; i<t.size(); ++i)
@@ -174,9 +229,19 @@ double MyModel::log_likelihood() const
     }
 
     // QSO term
-    Eigen::VectorXd alpha_real(1), beta_real(1);
+    Eigen::VectorXd alpha_real(1 + data.get_num_images()),
+                    beta_real (1 + data.get_num_images());
     alpha_real(0) = qso_amplitude;
-    beta_real(0)  = 1.0/qso_timescale;
+    beta_real(0) = 1.0/qso_timescale;
+
+    // Microlensing terms
+    for(size_t i=0; i<data.get_num_images(); ++i)
+    {
+        alpha_real(i+1) = mu_amplitude*
+                            exp(sig_log_amplitude*amplitude_ns[i]);
+        beta_real(i+1)  = 1.0/mu_timescale/
+                            exp(sig_log_timescale*timescale_ns[i]);
+    }
 
     // Celerite solver
     celerite::solver::BandSolver<double> solver(true);
@@ -208,6 +273,16 @@ void MyModel::print(std::ostream& out) const
     for(double tau: time_delays)
         out << tau << ' ';
 
+    out << mu_amplitude << ' ';
+    out << sig_log_amplitude << ' ';
+    out << mu_timescale << ' ';
+    out << sig_log_timescale << ' ';
+
+    for(double n: amplitude_ns)
+        out << (mu_amplitude*exp(sig_log_amplitude*n)) << ' ';
+    for(double n: timescale_ns)
+        out << (mu_timescale*exp(sig_log_timescale*n)) << ' ';
+
     out << sigma_boost_factor << ' ';
 }
 
@@ -224,6 +299,16 @@ std::string MyModel::description() const
 
     for(size_t i=0; i<magnitudes.size(); ++i)
         s << "time_delays[" << i << "], ";
+
+    s << "mu_amplitude, ";
+    s << "sig_log_amplitude, ";
+    s << "mu_timescale, ";
+    s << "sig_log_timescale, ";
+
+    for(size_t i=0; i<amplitude_ns.size(); ++i)
+        s << "ml_amplitudes[" << i << "], ";
+    for(size_t i=0; i<amplitude_ns.size(); ++i)
+        s << "ml_timescales[" << i << "], ";
 
     s << "sigma_boost_factor, ";
 

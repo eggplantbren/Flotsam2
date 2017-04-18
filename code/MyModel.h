@@ -2,7 +2,6 @@
 #define Flotsam2_MyModel
 
 #include "DNest4/code/DNest4.h"
-#include "MyConditionalPrior.h"
 #include <ostream>
 #include "celerite/celerite.h"
 
@@ -28,6 +27,13 @@ class MyModel
 
         // Time delays (relative to image 0)
         std::vector<double> time_delays;
+
+        // Amplitudes and timescales for extra
+        // correlated residual ("microlensing")
+        double mu_amplitude, sig_log_amplitude;
+        double mu_timescale, sig_log_timescale;
+        std::vector<double> amplitude_ns;
+        std::vector<double> timescale_ns;
 
         // Error bar boost parameter
         double u_boost;
