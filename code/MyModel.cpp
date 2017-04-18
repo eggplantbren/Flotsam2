@@ -85,107 +85,116 @@ double MyModel::perturb(DNest4::RNG& rng)
     // Grab timescale from data
     double t_range = Data::get_instance().get_t_range();
 
-    int which = rng.rand_int(13);
+    bool bulk = rng.rand() <= 0.5;
+    if(bulk)
+    {
+        int which = rng.rand_int(4);
 
-    if(which == 0)
-    {
-        logH -= -0.5*pow(mu_magnitudes/30.0, 2);
-        mu_magnitudes += 30.0*rng.randh();
-        logH += -0.5*pow(mu_magnitudes/30.0, 2);
+        if(which == 0)
+        {
+            int i = rng.rand_int(magnitude_ns.size());
 
-        compute_magnitudes();
-    }
-    else if(which == 1)
-    {
-        sig_magnitudes = log(sig_magnitudes);
-        sig_magnitudes += log(100.0)*rng.randh();
-        DNest4::wrap(sig_magnitudes, log(0.1), log(10.0));
-        sig_magnitudes = exp(sig_magnitudes);
+            logH -= -0.5*pow(magnitude_ns[i], 2);
+            magnitude_ns[i] += rng.randh();
+            logH += -0.5*pow(magnitude_ns[i], 2);
 
-        compute_magnitudes();
-    }
-    else if(which == 2)
-    {
-        int i = rng.rand_int(magnitude_ns.size());
+            compute_magnitudes();
+        }
+        else if(which == 1)
+        {
+            // Which time delay to change
+            int i = 1 + rng.rand_int(time_delays.size() - 1);
 
-        logH -= -0.5*pow(magnitude_ns[i], 2);
-        magnitude_ns[i] += rng.randh();
-        logH += -0.5*pow(magnitude_ns[i], 2);
+            double width = 0.1*t_range;
+            DNest4::Cauchy cauchy(0.0, width);
+            logH += cauchy.perturb(time_delays[i], rng);
+            if(std::abs(time_delays[i]) > t_range)
+                return -1E300;
+        }
+        else if(which == 2)
+        {
+            int i = rng.rand_int(amplitude_ns.size());
 
-        compute_magnitudes();
-    }
-    else if(which == 3)
-    {
-        qso_amplitude = 1.0 - exp(-qso_amplitude);
-        qso_amplitude += rng.randh();
-        DNest4::wrap(qso_amplitude, 0.0, 1.0);
-        qso_amplitude = -log(1.0 - qso_amplitude);
-    }
-    else if(which == 4)
-    {
-        // Grab timescale from data
-        double t_range = Data::get_instance().get_t_range();
-        qso_timescale = log(qso_timescale);
-        qso_timescale += log(100.0)*rng.randh();
-        DNest4::wrap(qso_timescale, log(0.1*t_range), log(10.0*t_range));
-        qso_timescale = exp(qso_timescale);
-    }
-    else if(which == 5)
-    {
-        // Which time delay to change
-        int i = 1 + rng.rand_int(time_delays.size() - 1);
+            logH -= -0.5*pow(amplitude_ns[i], 2);
+            amplitude_ns[i] += rng.randh();
+            logH += -0.5*pow(amplitude_ns[i], 2);
+        }
+        else
+        {
+            int i = rng.rand_int(timescale_ns.size());
 
-        double width = 0.1*t_range;
-        DNest4::Cauchy cauchy(0.0, width);
-        logH += cauchy.perturb(time_delays[i], rng);
-        if(std::abs(time_delays[i]) > t_range)
-            return -1E300;
-    }
-    else if(which == 6)
-    {
-        mu_amplitude = 1.0 - exp(-mu_amplitude);
-        mu_amplitude += rng.randh();
-        DNest4::wrap(mu_amplitude, 0.0, 1.0);
-        mu_amplitude = -log(1.0 - mu_amplitude);
-    }
-    else if(which == 7)
-    {
-        sig_log_amplitude += 3.0*rng.randh();
-        DNest4::wrap(sig_log_amplitude, 0.0, 3.0);
-    }
-    else if(which == 8)
-    {
-        mu_timescale = log(mu_timescale);
-        mu_timescale += log(100.0)*rng.randh();
-        DNest4::wrap(mu_timescale, log(0.1*t_range), log(10.0*t_range));
-        mu_timescale = exp(mu_timescale);       
-    }
-    else if(which == 9)
-    {
-        sig_log_timescale += 3.0*rng.randh();
-        DNest4::wrap(sig_log_timescale, 0.0, 3.0);
-    }
-    else if(which == 10)
-    {
-        int i = rng.rand_int(amplitude_ns.size());
-
-        logH -= -0.5*pow(amplitude_ns[i], 2);
-        amplitude_ns[i] += rng.randh();
-        logH += -0.5*pow(amplitude_ns[i], 2);
-    }
-    else if(which == 11)
-    {
-        int i = rng.rand_int(timescale_ns.size());
-
-        logH -= -0.5*pow(timescale_ns[i], 2);
-        timescale_ns[i] += rng.randh();
-        logH += -0.5*pow(timescale_ns[i], 2);
+            logH -= -0.5*pow(timescale_ns[i], 2);
+            timescale_ns[i] += rng.randh();
+            logH += -0.5*pow(timescale_ns[i], 2);
+        }
     }
     else
     {
-        u_boost += rng.randh();
-        DNest4::wrap(u_boost, 0.0, 1.0);
-        compute_sigma_boost_factor();
+        int which = rng.rand_int(9);
+
+        if(which == 0)
+        {
+            logH -= -0.5*pow(mu_magnitudes/30.0, 2);
+            mu_magnitudes += 30.0*rng.randh();
+            logH += -0.5*pow(mu_magnitudes/30.0, 2);
+
+            compute_magnitudes();
+        }
+        else if(which == 1)
+        {
+            sig_magnitudes = log(sig_magnitudes);
+            sig_magnitudes += log(100.0)*rng.randh();
+            DNest4::wrap(sig_magnitudes, log(0.1), log(10.0));
+            sig_magnitudes = exp(sig_magnitudes);
+
+            compute_magnitudes();
+        }
+        else if(which == 2)
+        {
+            qso_amplitude = 1.0 - exp(-qso_amplitude);
+            qso_amplitude += rng.randh();
+            DNest4::wrap(qso_amplitude, 0.0, 1.0);
+            qso_amplitude = -log(1.0 - qso_amplitude);
+        }
+        else if(which == 3)
+        {
+            // Grab timescale from data
+            double t_range = Data::get_instance().get_t_range();
+            qso_timescale = log(qso_timescale);
+            qso_timescale += log(100.0)*rng.randh();
+            DNest4::wrap(qso_timescale, log(0.1*t_range), log(10.0*t_range));
+            qso_timescale = exp(qso_timescale);
+        }
+        else if(which == 4)
+        {
+            mu_amplitude = 1.0 - exp(-mu_amplitude);
+            mu_amplitude += rng.randh();
+            DNest4::wrap(mu_amplitude, 0.0, 1.0);
+            mu_amplitude = -log(1.0 - mu_amplitude);
+        }
+        else if(which == 5)
+        {
+            sig_log_amplitude += 3.0*rng.randh();
+            DNest4::wrap(sig_log_amplitude, 0.0, 3.0);
+        }
+        else if(which == 6)
+        {
+            mu_timescale = log(mu_timescale);
+            mu_timescale += log(100.0)*rng.randh();
+            DNest4::wrap(mu_timescale, log(0.1*t_range), log(10.0*t_range));
+            mu_timescale = exp(mu_timescale);       
+        }
+        else if(which == 7)
+        {
+            sig_log_timescale += 3.0*rng.randh();
+            DNest4::wrap(sig_log_timescale, 0.0, 3.0);
+        }
+        else
+        {
+            u_boost += rng.randh();
+            DNest4::wrap(u_boost, 0.0, 1.0);
+            compute_sigma_boost_factor();
+        }
     }
 
     return logH;
