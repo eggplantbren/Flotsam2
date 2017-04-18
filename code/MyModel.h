@@ -1,32 +1,30 @@
-#ifndef Celery_MyModel
-#define Celery_MyModel
+#ifndef Flotsam2_MyModel
+#define Flotsam2_MyModel
 
 #include "DNest4/code/DNest4.h"
 #include "MyConditionalPrior.h"
 #include <ostream>
 #include "celerite/celerite.h"
 
-namespace Celery
+namespace Flotsam2
 {
 
 class MyModel
 {
     private:
-        // Maximum number of modes
-        static constexpr size_t max_num_modes = 30;
 
-        // The modes
-        DNest4::RJObject<MyConditionalPrior> modes;
+        // Hyperparameters for mean levels of images
+        double mu_magnitudes;
+        double sig_magnitudes;
+
+        // Normals for mean levels of images
+        std::vector<double> magnitude_ns;
+        std::vector<double> magnitudes;
 
         // Error bar boost parameter
         double u_boost;
         double sigma_boost_factor;
         void compute_sigma_boost_factor();
-
-        // For correlated noise
-        double correlated_noise_relative;
-        double correlated_noise_amplitude;
-        double correlated_noise_timescale;
 
     public:
         // Constructor only gives size of params
@@ -48,7 +46,7 @@ class MyModel
         std::string description() const;
 };
 
-} // namespace Celery
+} // namespace Flotsam2
 
 #endif
 
