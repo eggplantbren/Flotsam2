@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = np.loadtxt("j1131.txt")
+data = np.loadtxt("data.txt")
 
 def plot_subset(image):
     subset = data[:,3] == image
