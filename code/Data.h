@@ -13,6 +13,7 @@ class Data
         std::vector<double> t, y, sig;
         std::vector<size_t> image;
         Eigen::VectorXd tt, yy, var;
+        size_t num_images;
 
     public:
         Data();
@@ -23,6 +24,7 @@ class Data
         const std::vector<double>& get_y()     const { return y; }
         const std::vector<double>& get_sig()   const { return sig; }
         const std::vector<size_t>& get_image() const { return image; }
+        size_t get_num_images() const { return num_images; }
 
         // Getters of eigen vectors
         const Eigen::VectorXd& get_tt()  const { return tt; }

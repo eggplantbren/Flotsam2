@@ -2,6 +2,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <set>
 
 namespace Flotsam2
 {
@@ -54,6 +55,14 @@ void Data::load(const char* filename)
         yy(i) = y[i];
         var(i) = sig[i] * sig[i];
     }
+
+    // Use a set to count number of images
+    std::set<size_t> temp;
+    for(auto img: image)
+        temp.insert(img);
+    num_images = temp.size();
+
+    std::cout<<"# Found data from "<<num_images<<" images."<<std::endl;
 }
 
 } // namespace Flotsam2
