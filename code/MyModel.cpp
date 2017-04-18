@@ -94,6 +94,38 @@ double MyModel::log_likelihood() const
 {
     double logL = 0.0;
 
+    // Grab the data
+    const Data& data = Data::get_instance();
+
+    // For the correlated noise
+    Eigen::VectorXd alpha_real, beta_real;
+
+    // Inflated variance
+    Eigen::VectorXd var = data.get_var();
+    double fsq = pow(sigma_boost_factor, 2);
+    for(int i=0; i<var.size(); ++i)
+        var(i) *= fsq;
+
+    // Celerite solver
+    celerite::solver::BandSolver<double> solver(true);
+    solver.compute(alpha_real, beta_real,
+                   Eigen::VectorXd(0),
+                   Eigen::VectorXd(0),
+                   Eigen::VectorXd(0),
+                   Eigen::VectorXd(0),
+                   data.get_tt(), var);
+
+    // Copy the data
+    Eigen::VectorXd y = Data::get_instance().get_yy();
+
+    // Subtract the magnitudes
+    for(size_t i=0; i<y.size(); ++i)
+        y(i) -= magnitudes[Data::get_instance().get_image()[i]];
+
+    logL += -0.5*log(2*M_PI)*data.get_y().size();
+    logL += -0.5*solver.log_determinant();
+    logL += -0.5*solver.dot_solve(y);
+
     return logL;
 }
 
