@@ -56,7 +56,7 @@ double MyModel::perturb(DNest4::RNG& rng)
 {
     double logH = 0.0;
 
-    int which = rng.rand_int(4);
+    int which = rng.rand_int(6);
 
     if(which == 0)
     {
@@ -85,6 +85,22 @@ double MyModel::perturb(DNest4::RNG& rng)
 
         compute_magnitudes();
     }
+    else if(which == 3)
+    {
+        qso_amplitude = 1.0 - exp(-qso_amplitude);
+        qso_amplitude += rng.randh();
+        DNest4::wrap(qso_amplitude, 0.0, 1.0);
+        qso_amplitude = -log(1.0 - qso_amplitude);
+    }
+    else if(which == 4)
+    {
+        // Grab timescale from data
+        double t_range = Data::get_instance().get_t_range();
+        qso_timescale = log(qso_timescale);
+        qso_timescale += log(100.0)*rng.randh();
+        DNest4::wrap(qso_timescale, log(0.1*t_range), log(10.0*t_range));
+        qso_timescale = exp(qso_timescale);
+    }
     else
     {
         u_boost += rng.randh();
@@ -102,8 +118,20 @@ double MyModel::log_likelihood() const
     // Grab the data
     const Data& data = Data::get_instance();
 
-    // For the correlated noise
-    Eigen::VectorXd alpha_real, beta_real;
+    // Make copies of things in the data
+    Eigen::VectorXd t = data.get_tt();
+    Eigen::VectorXd y = Data::get_instance().get_yy();
+
+    // Adjust for time delays
+
+    // Subtract the magnitudes
+    for(size_t i=0; i<y.size(); ++i)
+        y(i) -= magnitudes[Data::get_instance().get_image()[i]];
+
+    // QSO term
+    Eigen::VectorXd alpha_real(1), beta_real(1);
+    alpha_real(0) = qso_amplitude;
+    beta_real(0)  = 1.0/qso_timescale;
 
     // Inflated variance
     Eigen::VectorXd var = data.get_var();
@@ -118,14 +146,7 @@ double MyModel::log_likelihood() const
                    Eigen::VectorXd(0),
                    Eigen::VectorXd(0),
                    Eigen::VectorXd(0),
-                   data.get_tt(), var);
-
-    // Copy the data
-    Eigen::VectorXd y = Data::get_instance().get_yy();
-
-    // Subtract the magnitudes
-    for(size_t i=0; i<y.size(); ++i)
-        y(i) -= magnitudes[Data::get_instance().get_image()[i]];
+                   t, var);
 
     logL += -0.5*log(2*M_PI)*data.get_y().size();
     logL += -0.5*solver.log_determinant();
@@ -142,6 +163,9 @@ void MyModel::print(std::ostream& out) const
     for(double m: magnitudes)
         out << m << ' ';
 
+    out << qso_amplitude << ' ';
+    out << qso_timescale << ' ';
+
     out << sigma_boost_factor << ' ';
 }
 
@@ -153,6 +177,8 @@ std::string MyModel::description() const
     s << "sig_magnitudes, ";
     for(size_t i=0; i<magnitudes.size(); ++i)
         s << "magnitudes[" << i << "], ";
+
+    s << "qso_amplitude, qso_timescale, ";
 
     s << "sigma_boost_factor, ";
 
