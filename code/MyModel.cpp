@@ -22,8 +22,10 @@ void MyModel::from_prior(DNest4::RNG& rng)
 
     for(size_t i=0; i<magnitudes.size(); ++i)
         magnitude_ns[i] = rng.randn();
-
     compute_magnitudes();
+
+    u_boost = rng.rand();
+    compute_sigma_boost_factor();
 }
 
 void MyModel::compute_magnitudes()
@@ -49,7 +51,7 @@ double MyModel::perturb(DNest4::RNG& rng)
 {
     double logH = 0.0;
 
-    int which = rng.rand_int(3);
+    int which = rng.rand_int(4);
 
     if(which == 0)
     {
@@ -68,7 +70,7 @@ double MyModel::perturb(DNest4::RNG& rng)
 
         compute_magnitudes();
     }
-    else
+    else if(which == 2)
     {
         int i = rng.rand_int(magnitude_ns.size());
 
@@ -77,6 +79,12 @@ double MyModel::perturb(DNest4::RNG& rng)
         logH += -0.5*pow(magnitude_ns[i], 2);
 
         compute_magnitudes();
+    }
+    else
+    {
+        u_boost += rng.randh();
+        DNest4::wrap(u_boost, 0.0, 1.0);
+        compute_sigma_boost_factor();
     }
 
     return logH;
@@ -96,6 +104,8 @@ void MyModel::print(std::ostream& out) const
 
     for(double m: magnitudes)
         out << m << ' ';
+
+    out << sigma_boost_factor << ' ';
 }
 
 std::string MyModel::description() const
@@ -106,6 +116,8 @@ std::string MyModel::description() const
     s << "sig_magnitudes, ";
     for(size_t i=0; i<magnitudes.size(); ++i)
         s << "magnitudes[" << i << "], ";
+
+    s << "sigma_boost_factor, ";
 
     return s.str();
 }
