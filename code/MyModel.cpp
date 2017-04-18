@@ -24,6 +24,11 @@ void MyModel::from_prior(DNest4::RNG& rng)
         magnitude_ns[i] = rng.randn();
     compute_magnitudes();
 
+    // Grab timescale from data
+    double t_range = Data::get_instance().get_t_range();
+    qso_amplitude = -log(1.0 - rng.rand());
+    qso_timescale = exp(log(0.1*t_range) + log(100.0)*rng.rand());
+
     u_boost = rng.rand();
     compute_sigma_boost_factor();
 }

@@ -22,6 +22,10 @@ class MyModel
         std::vector<double> magnitudes;
         void compute_magnitudes();
 
+        // Amplitude and timescale for QSO variability
+        double qso_amplitude;
+        double qso_timescale;
+
         // Error bar boost parameter
         double u_boost;
         double sigma_boost_factor;
