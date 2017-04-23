@@ -105,7 +105,7 @@ double MyModel::perturb(DNest4::RNG& rng)
 
             compute_magnitudes();
         }
-        else if(which == 2)
+        else if(which == 1)
         {
             int i = rng.rand_int(amplitude_ns.size());
 
