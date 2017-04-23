@@ -38,6 +38,8 @@ class MyModel
 
         // Microlensing details
         std::vector<double> microlensing_details_ns;
+        std::vector<std::vector<double>> microlensing_details;
+        void compute_microlensing_details();
 
         // Error bar boost parameter
         double u_boost;

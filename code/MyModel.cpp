@@ -13,6 +13,7 @@ MyModel::MyModel()
 ,amplitude_ns(Data::get_instance().get_num_images())
 ,timescale_ns(Data::get_instance().get_num_images())
 ,microlensing_details_ns(Data::get_instance().get_t().size())
+,microlensing_details(Data::get_instance().get_num_images())
 {
 
 }
@@ -49,6 +50,8 @@ void MyModel::from_prior(DNest4::RNG& rng)
         n = rng.randn();
     for(double& n: timescale_ns)
         n = rng.randn();
+    for(double& n: microlensing_details_ns)
+        n = rng.randn();
 
     u_boost = rng.rand();
     compute_sigma_boost_factor();
@@ -58,6 +61,11 @@ void MyModel::compute_magnitudes()
 {
     for(size_t i=0; i<magnitudes.size(); ++i)
         magnitudes[i] = mu_magnitudes + sig_magnitudes*magnitude_ns[i];
+}
+
+void MyModel::compute_microlensing_details()
+{
+
 }
 
 void MyModel::compute_sigma_boost_factor()
@@ -141,6 +149,8 @@ double MyModel::perturb(DNest4::RNG& rng)
                 for(int i=0; i<reps; ++i)
                     microlensing_details_ns[rng.rand_int(size)] = rng.randn();
             }
+
+            compute_microlensing_details();
         }
     }
     else
