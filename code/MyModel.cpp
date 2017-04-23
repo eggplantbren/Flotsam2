@@ -12,6 +12,7 @@ MyModel::MyModel()
 ,time_delay_ns(Data::get_instance().get_num_images(), 0.0)
 ,amplitude_ns(Data::get_instance().get_num_images())
 ,timescale_ns(Data::get_instance().get_num_images())
+,microlensing_details_ns(Data::get_instance().get_t().size())
 {
 
 }
@@ -93,7 +94,7 @@ double MyModel::perturb(DNest4::RNG& rng)
 
     if(bulk)
     {
-        int which = rng.rand_int(3);
+        int which = rng.rand_int(4);
 
         if(which == 0)
         {
@@ -113,13 +114,33 @@ double MyModel::perturb(DNest4::RNG& rng)
             amplitude_ns[i] += rng.randh();
             logH += -0.5*pow(amplitude_ns[i], 2);
         }
-        else
+        else if(which == 2)
         {
             int i = rng.rand_int(timescale_ns.size());
 
             logH -= -0.5*pow(timescale_ns[i], 2);
             timescale_ns[i] += rng.randh();
             logH += -0.5*pow(timescale_ns[i], 2);
+        }
+        else
+        {
+            if(rng.rand() <= 0.5)
+            {
+                int i = rng.rand_int(microlensing_details_ns.size());
+
+                double& n = microlensing_details_ns[i];
+                logH -= -0.5*pow(n, 2);
+                n += rng.randh();
+                logH += -0.5*pow(n, 2);
+            }
+            else
+            {
+                size_t size = microlensing_details_ns.size();
+                int reps = (int)pow((double)size,
+                                    rng.rand());
+                for(int i=0; i<reps; ++i)
+                    microlensing_details_ns[rng.rand_int(size)] = rng.randn();
+            }
         }
     }
     else

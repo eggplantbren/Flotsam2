@@ -36,6 +36,9 @@ class MyModel
         std::vector<double> amplitude_ns;
         std::vector<double> timescale_ns;
 
+        // Microlensing details
+        std::vector<double> microlensing_details_ns;
+
         // Error bar boost parameter
         double u_boost;
         double sigma_boost_factor;
